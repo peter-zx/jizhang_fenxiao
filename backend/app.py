@@ -116,7 +116,7 @@ elif st.session_state.current_page == "add_salesperson":
     st.divider()
     st.subheader("参数配置")
     
-    with st.expander("系统参数 (参数C/D)", expanded=True):
+    with st.expander("系统参数 (参数C/D)", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
             new_c = st.number_input(f"参数C (默认{PARAM_C})", value=float(PARAM_C), min_value=0.0, step=10.0)
@@ -366,6 +366,48 @@ elif st.session_state.current_page == "salesperson":
                     st.rerun()
             else:
                 st.error("请填写必填项*")
+        
+        st.divider()
+        st.subheader("📥 批量导入")
+        
+        uploaded_file = st.file_uploader("上传Excel文件", type=["xlsx"], key="import_file")
+        if uploaded_file:
+            try:
+                df = pd.read_excel(uploaded_file)
+                st.dataframe(df.head(10))
+                
+                if st.button("确认导入到当前销售员"):
+                    imported_count = 0
+                    for _, row in df.iterrows():
+                        if pd.isna(row.get("产品名字")):
+                            continue
+                        product = Product(
+                            salesperson_id=person.id,
+                            name=row.get("产品名字", ""),
+                            years=str(row.get("年限", "")) if pd.notna(row.get("年限")) else "",
+                            product_type=str(row.get("类型", "")) if pd.notna(row.get("类型")) else "",
+                            grade=str(row.get("等级", "")) if pd.notna(row.get("等级")) else "",
+                            param_a=float(row.get("参数A", 0)) if pd.notna(row.get("参数A")) else 0,
+                            production_date=row.get("生产日期") if pd.notna(row.get("生产日期")) else None,
+                            expire_date=row.get("过期时间") if pd.notna(row.get("过期时间")) else None,
+                            seal_date=row.get("盖章日期") if pd.notna(row.get("盖章日期")) else None,
+                            seal_expire_date=row.get("盖章过期时间") if pd.notna(row.get("盖章过期时间")) else None,
+                            contact=str(row.get("联系方式", "")) if pd.notna(row.get("联系方式")) else "",
+                            address=str(row.get("地址", "")) if pd.notna(row.get("地址")) else "",
+                            emergency_contact=str(row.get("紧急联系", "")) if pd.notna(row.get("紧急联系")) else "",
+                            remark=str(row.get("备注", "")) if pd.notna(row.get("备注")) else "",
+                            is_approved=True,
+                            is_delivered=False,
+                            created_date=date.today()
+                        )
+                        db.add(product)
+                        imported_count += 1
+                    db.commit()
+                    recalculate_target_amounts()
+                    st.success(f"成功导入 {imported_count} 条产品数据")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"导入失败: {e}")
         
         st.divider()
         st.subheader("产品列表")
