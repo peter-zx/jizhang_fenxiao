@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -17,9 +17,34 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     salesperson_id = Column(Integer, ForeignKey("salespersons.id"), nullable=False)
+    
     name = Column(String(200), nullable=False)
-    amount = Column(Float, nullable=False)
+    years = Column(String(50))
+    product_type = Column(String(50))
+    grade = Column(String(50))
+    param_a = Column(Float, nullable=False)
+    production_date = Column(Date)
+    expire_date = Column(Date)
+    seal_date = Column(Date)
+    seal_expire_date = Column(Date)
+    contact = Column(String(100))
+    address = Column(Text)
+    emergency_contact = Column(String(100))
+    remark = Column(Text)
+    
+    is_approved = Column(Boolean, default=True)
     is_delivered = Column(Boolean, default=False)
     created_date = Column(Date, nullable=False)
 
     salesperson = relationship("SalesPerson", back_populates="products")
+
+    @property
+    def amount(self):
+        return self.param_a - 800
+
+class SystemConfig(Base):
+    __tablename__ = "system_config"
+
+    id = Column(Integer, primary_key=True, index=True)
+    param_c = Column(Float, default=300)
+    param_d = Column(Float, default=500)
