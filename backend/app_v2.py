@@ -216,6 +216,137 @@ st.markdown("""
         transform: translateY(-5px);
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     }
+    
+    /* 手机产品卡片 */
+    .mobile-product-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .mobile-product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+    
+    .mobile-product-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        flex: 1;
+    }
+    
+    .mobile-product-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .badge-delivered {
+        background: #d1fae5;
+        color: #10b981;
+    }
+    
+    .badge-pending {
+        background: #fef3c7;
+        color: #f59e0b;
+    }
+    
+    .badge-offshelf {
+        background: #e5e7eb;
+        color: #6b7280;
+    }
+    
+    .mobile-product-info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .mobile-product-info-item {
+        text-align: center;
+    }
+    
+    .mobile-product-info-label {
+        color: #9ca3af;
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+    
+    .mobile-product-info-value {
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    
+    .mobile-toggle-btn {
+        width: 100%;
+        padding: 0.8rem;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-toggle-on {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+    
+    .btn-toggle-off {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .mobile-section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin: 1rem 0 0.5rem 0;
+        padding-left: 0.5rem;
+    }
+    
+    /* 隐藏桌面端元素 */
+    .desktop-only {
+        display: block;
+    }
+    
+    /* 隐藏移动端元素 */
+    .mobile-only {
+        display: none;
+    }
+    
+    /* 响应式 - 手机 */
+    @media (max-width: 768px) {
+        .desktop-only {
+            display: none;
+        }
+        
+        .mobile-only {
+            display: block;
+        }
+        
+        .main-title {
+            font-size: 1.8rem;
+        }
+        
+        .metric-card {
+            padding: 1rem;
+            height: 100px;
+        }
+        
+        .mobile-product-info {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -635,86 +766,83 @@ elif st.session_state.current_page == "salesperson":
         if not all_products:
             st.info("暂无产品")
         else:
-            valid_count = len(products)
-            invalid_count = len(all_products) - valid_count
-            
-            header_cols = st.columns([1, 1, 2, 2, 2, 2, 1, 1])
-            with header_cols[0]:
-                st.markdown("**序号**")
-            with header_cols[1]:
-                st.markdown("**状态**")
-            with header_cols[2]:
-                st.markdown("**Name**")
-            with header_cols[3]:
-                st.markdown("**类型**")
-            with header_cols[4]:
-                st.markdown("**等级**")
-            with header_cols[5]:
-                st.markdown("**参数A**")
-            with header_cols[6]:
-                st.markdown("**上架**")
-            with header_cols[7]:
-                st.markdown("**操作**")
-            
-            st.markdown("---")
-            
             valid_products = [p for p in all_products if p.param_a > 800]
             invalid_products = [p for p in all_products if p.param_a <= 800]
             
-            idx_valid = 0
-            for prod in valid_products:
-                idx_valid += 1
-                display_idx = idx_valid
+            st.markdown(f"**统计**: 上架中 {len(valid_products)} | 下架 {len(invalid_products)} | 总计 {len(all_products)}", unsafe_allow_html=True)
+            
+            st.markdown("<p class='mobile-section-title'>📦 上架中产品</p>", unsafe_allow_html=True)
+            
+            for idx, prod in enumerate(valid_products):
+                badge_class = "badge-delivered" if prod.is_delivered else "badge-pending"
+                badge_text = "已完成" if prod.is_delivered else "待完成"
+                btn_class = "btn-toggle-on" if prod.is_delivered else "btn-toggle-off"
+                btn_text = "切换为未完成" if prod.is_delivered else "切换为已完成"
+                grade_val = str(int(float(prod.grade))) if prod.grade else "-"
                 
-                row_cols = st.columns([1, 1, 2, 2, 2, 2, 1, 1])
-                with row_cols[0]:
-                    st.write(str(display_idx))
-                with row_cols[1]:
+                st.markdown(f"""
+                <div class="mobile-product-card">
+                    <div class="mobile-product-header">
+                        <div class="mobile-product-name">{idx+1}. {prod.name}</div>
+                        <div class="mobile-product-badge {badge_class}">{badge_text}</div>
+                    </div>
+                    <div class="mobile-product-info">
+                        <div class="mobile-product-info-item">
+                            <div class="mobile-product-info-label">类型</div>
+                            <div class="mobile-product-info-value">{prod.product_type or "-"}</div>
+                        </div>
+                        <div class="mobile-product-info-item">
+                            <div class="mobile-product-info-label">等级</div>
+                            <div class="mobile-product-info-value">{grade_val}</div>
+                        </div>
+                        <div class="mobile-product-info-item">
+                            <div class="mobile-product-info-label">参数A</div>
+                            <div class="mobile-product-info-value">¥{prod.param_a:,.0f}</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                col1, col2 = st.columns([1, 1])
+                with col1:
                     if prod.is_delivered:
-                        st.markdown("<div class='status-icon status-delivered'>✓</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='text-align: center; color: #10b981; font-weight: 600; padding: 0.5rem; background: #d1fae5; border-radius: 12px;'>✓ 已完成</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown("<div class='status-icon status-pending'>○</div>", unsafe_allow_html=True)
-                with row_cols[2]:
-                    st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
-                with row_cols[3]:
-                    st.write(prod.product_type or "-")
-                with row_cols[4]:
-                    st.write(str(int(float(prod.grade))) if prod.grade else "-")
-                with row_cols[5]:
-                    st.write(f"¥{prod.param_a:,.0f}")
-                with row_cols[6]:
-                    st.write("✓")
-                with row_cols[7]:
-                    if st.button("切换", key=f"toggle_{prod.id}"):
+                        st.markdown("<div style='text-align: center; color: #f59e0b; font-weight: 600; padding: 0.5rem; background: #fef3c7; border-radius: 12px;'>○ 待完成</div>", unsafe_allow_html=True)
+                with col2:
+                    if st.button(f"切换状态", key=f"toggle_{prod.id}", use_container_width=True):
                         prod.is_delivered = not prod.is_delivered
                         db.commit()
                         st.rerun()
             
-            idx_invalid = 0
-            for prod in invalid_products:
-                idx_invalid += 1
-                display_idx = idx_invalid
+            if invalid_products:
+                st.markdown("<p class='mobile-section-title'>📦 下架产品</p>", unsafe_allow_html=True)
                 
-                row_cols = st.columns([1, 1, 2, 2, 2, 2, 1, 1])
-                with row_cols[0]:
-                    st.write(str(display_idx))
-                with row_cols[1]:
-                    st.markdown("<div style='background: #e5e7eb; color: #6b7280; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;'>下架</div>", unsafe_allow_html=True)
-                with row_cols[2]:
-                    st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
-                with row_cols[3]:
-                    st.write(prod.product_type or "-")
-                with row_cols[4]:
-                    st.write(str(int(float(prod.grade))) if prod.grade else "-")
-                with row_cols[5]:
-                    st.write(f"¥{prod.param_a:,.0f}")
-                with row_cols[6]:
-                    st.write("×")
-                with row_cols[7]:
-                    st.write("-")
-            
-            st.markdown("---")
-            st.markdown(f"**统计**: 上架中 {len(valid_products)} | 下架 {len(invalid_products)} | 总计 {len(all_products)}")
+                for idx, prod in enumerate(invalid_products):
+                    grade_val = str(int(float(prod.grade))) if prod.grade else "-"
+                    
+                    st.markdown(f"""
+                    <div class="mobile-product-card">
+                        <div class="mobile-product-header">
+                            <div class="mobile-product-name">{idx+1}. {prod.name}</div>
+                            <div class="mobile-product-badge badge-offshelf">下架</div>
+                        </div>
+                        <div class="mobile-product-info">
+                            <div class="mobile-product-info-item">
+                                <div class="mobile-product-info-label">类型</div>
+                                <div class="mobile-product-info-value">{prod.product_type or "-"}</div>
+                            </div>
+                            <div class="mobile-product-info-item">
+                                <div class="mobile-product-info-label">等级</div>
+                                <div class="mobile-product-info-value">{grade_val}</div>
+                            </div>
+                            <div class="mobile-product-info-item">
+                                <div class="mobile-product-info-label">参数A</div>
+                                <div class="mobile-product-info-value">¥{prod.param_a:,.0f}</div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
     
     elif st.session_state.salesperson_view == "edit":
         with st.expander("⚙️ 参数配置", expanded=False):
