@@ -318,11 +318,14 @@ if st.session_state.current_page == "home":
     
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
     
-    col_btn1, col_btn2 = st.columns(2)
+    col_btn1, col_btn2, col_btn3 = st.columns(3)
     with col_btn1:
         if st.button("➕ 新增销售员", use_container_width=True):
             navigate("add_salesperson")
     with col_btn2:
+        if st.button("👥 销售员管理", use_container_width=True):
+            navigate("manage_salesperson")
+    with col_btn3:
         if st.button("📥 导出数据", use_container_width=True):
             navigate("export")
     
@@ -437,6 +440,86 @@ elif st.session_state.current_page == "add_salesperson":
                     db.commit()
                     recalculate_target_amounts()
                     st.rerun()
+
+elif st.session_state.current_page == "manage_salesperson":
+    st.title("👥 销售员管理")
+    
+    if st.button("← 返回首页"):
+        navigate("home")
+        st.rerun()
+    
+    st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+    
+    persons = db.query(SalesPerson).all()
+    
+    if not persons:
+        st.info("暂无销售员数据")
+    else:
+        header_cols = st.columns([2, 2, 3, 3, 2, 2, 1])
+        with header_cols[0]:
+            st.markdown("**销售员**")
+        with header_cols[1]:
+            st.markdown("**产品数量**")
+        with header_cols[2]:
+            st.markdown("**建立时间**")
+        with header_cols[3]:
+            st.markdown("**合作时间**")
+        with header_cols[4]:
+            st.markdown("**详情**")
+        with header_cols[5]:
+            st.markdown("**删除**")
+        with header_cols[6]:
+            st.markdown("**操作**")
+        
+        st.markdown("---")
+        
+        for person in persons:
+            products = db.query(Product).filter(Product.salesperson_id == person.id).all()
+            product_count = len(products)
+            
+            created_date = products[0].created_date if products else date.today()
+            days_since_creation = (date.today() - created_date).days if created_date else 0
+            
+            col_vals = st.columns([2, 2, 3, 3, 2, 2, 1])
+            with col_vals[0]:
+                st.write(f"👤 {person.name}")
+            with col_vals[1]:
+                st.write(str(product_count))
+            with col_vals[2]:
+                st.write(str(created_date))
+            with col_vals[3]:
+                st.write(f"{days_since_creation} 天")
+            with col_vals[4]:
+                if st.button("详情", key=f"detail_{person.id}"):
+                    go_salesperson(person.id)
+            with col_vals[5]:
+                if st.button("删除", key=f"delete_btn_{person.id}"):
+                    st.session_state[f"show_delete_confirm_{person.id}"] = True
+            
+            if st.session_state.get(f"show_delete_confirm_{person.id}", False):
+                st.markdown("""
+                <div style="background: #fef3cd; border-radius: 8px; padding: 1rem; margin: 0.5rem 0;">
+                    <b>⚠️ 确认删除「{}」？</b><br>
+                    此操作将同时删除该销售员下的 {} 个产品<br>
+                    <b>请提前备份数据！</b>
+                </div>
+                """.format(person.name, product_count), unsafe_allow_html=True)
+                
+                col_confirm = st.columns(2)
+                with col_confirm[0]:
+                    if st.button("确认删除", key=f"do_delete_{person.id}"):
+                        db.query(Product).filter(Product.salesperson_id == person.id).delete()
+                        db.delete(person)
+                        db.commit()
+                        recalculate_target_amounts()
+                        st.success("已删除")
+                        st.rerun()
+                with col_confirm[1]:
+                    if st.button("取消", key=f"cancel_delete_{person.id}"):
+                        st.session_state[f"show_delete_confirm_{person.id}"] = False
+                        st.rerun()
+            
+            st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
 
 elif st.session_state.current_page == "salesperson":
     person = db.query(SalesPerson).filter(SalesPerson.id == st.session_state.selected_person_id).first()
