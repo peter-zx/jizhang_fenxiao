@@ -769,82 +769,38 @@ elif st.session_state.current_page == "salesperson":
             valid_products = [p for p in all_products if p.param_a > 800]
             invalid_products = [p for p in all_products if p.param_a <= 800]
             
-            st.markdown(f"**统计**: 上架中 {len(valid_products)} | 下架 {len(invalid_products)} | 总计 {len(all_products)}", unsafe_allow_html=True)
+            st.markdown(f"**统计**: 上架中 {len(valid_products)} | 下架 {len(invalid_products)} | 总计 {len(all_products)}")
             
-            table_html = """
-            <style>
-                .product-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .product-table th { background: #f8fafc; padding: 12px 10px; text-align: left; font-weight: 600; color: #1a1a2e; border-bottom: 2px solid #e5e7eb; }
-                .product-table td { padding: 12px 10px; border-bottom: 1px solid #f3f4f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .product-table tr:hover { background: #fafafa; }
-                .col-num { width: 8%; }
-                .col-status { width: 15%; }
-                .col-name { width: 40%; }
-                .col-amount { width: 20%; }
-                .col-action { width: 17%; }
-                .badge-done { background: #d1fae5; color: #10b981; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500; }
-                .badge-pending { background: #fef3c7; color: #f59e0b; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500; }
-                .badge-off { background: #f3f4f6; color: #9ca3af; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500; }
-            </style>
-            <table class="product-table">
-                <thead>
-                    <tr>
-                        <th class="col-num">序号</th>
-                        <th class="col-status">状态</th>
-                        <th class="col-name">产品名称</th>
-                        <th class="col-amount">参数A</th>
-                        <th class="col-action">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-            
+            df_data = []
             for idx, prod in enumerate(valid_products):
-                status_badge = '<span class="badge-done">✓ 已完成</span>' if prod.is_delivered else '<span class="badge-pending">○ 待完成</span>'
-                table_html += f"""
-                    <tr>
-                        <td>{idx+1}</td>
-                        <td>{status_badge}</td>
-                        <td><b>{prod.name}</b></td>
-                        <td>¥{prod.param_a:,.0f}</td>
-                        <td></td>
-                    </tr>
-                """
+                status = "✓ 已完成" if prod.is_delivered else "○ 待完成"
+                df_data.append({
+                    "序号": idx + 1,
+                    "状态": status,
+                    "产品名称": prod.name,
+                    "参数A": prod.param_a
+                })
             
-            for idx, prod in enumerate(invalid_products):
-                table_html += f"""
-                    <tr style="opacity: 0.5;">
-                        <td>{idx+1}</td>
-                        <td><span class="badge-off">下架</span></td>
-                        <td>{prod.name}</td>
-                        <td>¥{prod.param_a:,.0f}</td>
-                        <td></td>
-                    </tr>
-                """
+            df = pd.DataFrame(df_data)
             
-            table_html += "</tbody></table>"
+            col_config = {
+                "序号": st.column_config.NumberColumn("序号", width="small"),
+                "状态": st.column_config.TextColumn("状态", width="medium"),
+                "产品名称": st.column_config.TextColumn("产品名称", width="large"),
+                "参数A": st.column_config.NumberColumn("参数A", format="¥%.0f", width="medium"),
+            }
             
-            col_left, col_right = st.columns([65, 35])
+            st.dataframe(df, column_config=col_config, hide_index=True, use_container_width=True)
             
-            with col_left:
-                st.html(table_html)
+            st.markdown("---")
+            st.markdown("**切换产品状态**")
             
-            with col_right:
-                st.markdown("#### 操作")
-                for idx, prod in enumerate(valid_products):
+            btn_cols = st.columns([1, 3, 1])
+            for i, prod in enumerate(valid_products):
+                with btn_cols[i % 3]:
                     status_text = "✓ 已完成" if prod.is_delivered else "○ 待完成"
-                    status_color = "#10b981" if prod.is_delivered else "#f59e0b"
-                    btn_text = "标记未完成" if prod.is_delivered else "标记已完成"
-                    
-                    st.markdown(f"""
-                    <div style="display: flex; align-items: center; justify-content: space-between; 
-                                padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
-                        <span style="color: {status_color}; font-size: 12px;">{idx+1}. {prod.name[:8]}</span>
-                        <span style="font-size: 11px; color: #9ca3af;">{status_text}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if st.button(btn_text, key=f"toggle_{prod.id}", use_container_width=True):
+                    btn_label = f"{prod.name[:6]}... [{status_text}]" if len(prod.name) > 6 else f"{prod.name} [{status_text}]"
+                    if st.button(btn_label, key=f"toggle_{prod.id}", use_container_width=True):
                         prod.is_delivered = not prod.is_delivered
                         db.commit()
                         st.rerun()
