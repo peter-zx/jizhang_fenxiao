@@ -25,22 +25,27 @@ st.markdown("""
     
     /* 统计卡片 */
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         border-radius: 16px;
         padding: 1.5rem;
-        color: white;
+        color: #1a1a2e;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     
     .metric-card-green {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);
+        background: rgba(255, 255, 255, 0.25);
     }
     
     .metric-card-orange {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+        background: rgba(255, 255, 255, 0.25);
     }
     
     /* 销售员卡片 */
@@ -287,32 +292,37 @@ if st.session_state.current_page == "home":
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(f"""
-        <div class="metric-card" style="height: 100%;">
+        <div class="metric-card">
             <div style="font-size: 2rem; font-weight: 700;">{total_persons}</div>
-            <div style="opacity: 0.9;">销售员人数</div>
+            <div style="font-size: 0.85rem; opacity: 0.7;">销售员人数</div>
         </div>
         """, unsafe_allow_html=True)
     with col2:
         st.markdown(f"""
-        <div class="metric-card metric-card-green" style="height: 100%;">
-            <div style="font-size: 1.5rem; font-weight: 700;">¥{total_target:,.0f}</div>
-            <div style="font-size: 1rem; opacity: 0.9;">目标总金额</div>
-            <div style="margin-top: 0.5rem; font-size: 1.5rem; font-weight: 700;">¥{total_delivered_amount:,.0f}</div>
-            <div style="font-size: 1rem; opacity: 0.9;">已完成金额</div>
+        <div style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 16px; padding: 1.5rem; color: #1a1a2e; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); height: 120px; display: flex; flex-direction: row; align-items: center; justify-content: center;">
+            <div style="flex: 1; text-align: center;">
+                <div style="font-size: 1.3rem; font-weight: 700;">¥{total_target:,.0f}</div>
+                <div style="font-size: 0.7rem; opacity: 0.7;">目标总金额</div>
+            </div>
+            <div style="width: 1px; height: 60px; background: rgba(0,0,0,0.1); margin: 0 0.5rem;"></div>
+            <div style="flex: 1; text-align: center;">
+                <div style="font-size: 1.3rem; font-weight: 700;">¥{total_delivered_amount:,.0f}</div>
+                <div style="font-size: 0.7rem; opacity: 0.7;">已完成金额</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown(f"""
-        <div class="metric-card" style="height: 100%;">
+        <div class="metric-card">
             <div style="font-size: 2rem; font-weight: 700;">{total_delivered_count}/{total_product_count}</div>
-            <div style="opacity: 0.9;">完成总数量</div>
+            <div style="font-size: 0.85rem; opacity: 0.7;">完成总数量</div>
         </div>
         """, unsafe_allow_html=True)
     with col4:
         st.markdown(f"""
-        <div class="metric-card metric-card-orange" style="height: 100%;">
+        <div class="metric-card metric-card-orange">
             <div style="font-size: 2rem; font-weight: 700;">{pending_approvals}</div>
-            <div style="opacity: 0.9;">待审批</div>
+            <div style="font-size: 0.85rem; opacity: 0.7;">待审批</div>
         </div>
         """, unsafe_allow_html=True)
     
