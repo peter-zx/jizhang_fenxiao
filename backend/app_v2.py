@@ -5,6 +5,8 @@ from database import engine, Base, SessionLocal
 from models import SalesPerson, Product, SystemConfig, MonthlyRecord
 import io
 
+Base.metadata.create_all(bind=engine)
+
 st.set_page_config(page_title="记账核算工具", layout="wide")
 
 st.markdown("""
