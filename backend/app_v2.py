@@ -824,7 +824,7 @@ elif st.session_state.current_page == "salesperson":
             
             table_html += "</tbody></table>"
             
-            st.markdown(table_html, unsafe_allow_html=True)
+            st.html(table_html)
             
             st.markdown("---")
             st.markdown("**切换产品状态**")
