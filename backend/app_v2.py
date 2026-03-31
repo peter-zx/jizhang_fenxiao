@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 from database import engine, Base, SessionLocal
-from models import SalesPerson, Product, SystemConfig
+from models import SalesPerson, Product, SystemConfig, MonthlyRecord
 import io
 
 st.set_page_config(page_title="记账核算工具", layout="wide")
@@ -249,7 +249,8 @@ DEFAULT_COLUMNS = ["产品名字", "类型", "等级"]
 
 def recalculate_target_amounts():
     for person in db.query(SalesPerson).all():
-        products = db.query(Product).filter(Product.salesperson_id == person.id).all()
+        all_products = db.query(Product).filter(Product.salesperson_id == person.id).all()
+        products = get_valid_products(all_products)
         person.target_amount = sum(p.amount for p in products)
     db.commit()
 
@@ -259,6 +260,48 @@ def check_duplicate_product(salesperson_id, product_name):
         Product.name == product_name
     ).first()
     return existing is not None
+
+def get_valid_products(products):
+    return [p for p in products if p.param_a > 800]
+
+def save_monthly_snapshot():
+    today = date.today()
+    year, month = today.year, today.month
+    
+    for person in db.query(SalesPerson).all():
+        existing = db.query(MonthlyRecord).filter(
+            MonthlyRecord.salesperson_id == person.id,
+            MonthlyRecord.year == year,
+            MonthlyRecord.month == month
+        ).first()
+        
+        all_products = db.query(Product).filter(Product.salesperson_id == person.id).all()
+        valid_products = get_valid_products(all_products)
+        
+        total_products = len(valid_products)
+        total_amount = sum(p.amount for p in valid_products)
+        delivered_count = sum(1 for p in valid_products if p.is_delivered)
+        delivered_amount = sum(p.amount for p in valid_products if p.is_delivered)
+        
+        if existing:
+            existing.total_products = total_products
+            existing.total_amount = total_amount
+            existing.delivered_count = delivered_count
+            existing.delivered_amount = delivered_amount
+            existing.snapshot_date = today
+        else:
+            record = MonthlyRecord(
+                salesperson_id=person.id,
+                year=year,
+                month=month,
+                total_products=total_products,
+                total_amount=total_amount,
+                delivered_count=delivered_count,
+                delivered_amount=delivered_amount,
+                snapshot_date=today
+            )
+            db.add(record)
+    db.commit()
 
 def render_progress_bar(delivered, total, height=8):
     if total == 0:
@@ -280,14 +323,16 @@ if st.session_state.current_page == "home":
     
     total_persons = db.query(SalesPerson).count()
     all_persons = db.query(SalesPerson).all()
-    total_target = sum(p.target_amount for p in all_persons)
     
     all_products = db.query(Product).all()
-    total_delivered_amount = sum(p.amount for p in all_products if p.is_delivered)
-    total_delivered_count = sum(1 for p in all_products if p.is_delivered)
-    total_product_count = len(all_products)
+    valid_products = get_valid_products(all_products)
     
-    pending_approvals = db.query(Product).filter(Product.is_approved == False).count()
+    total_target = sum(p.amount for p in valid_products)
+    total_delivered_amount = sum(p.amount for p in valid_products if p.is_delivered)
+    total_delivered_count = sum(1 for p in valid_products if p.is_delivered)
+    total_product_count = len(valid_products)
+    
+    pending_approvals = db.query(Product).filter(Product.is_approved == False, Product.param_a > 800).count()
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -328,7 +373,7 @@ if st.session_state.current_page == "home":
     
     st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
     
-    col_btn1, col_btn2, col_btn3 = st.columns(3)
+    col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
     with col_btn1:
         if st.button("➕ 新增销售员", use_container_width=True):
             navigate("add_salesperson")
@@ -336,6 +381,9 @@ if st.session_state.current_page == "home":
         if st.button("👥 销售员管理", use_container_width=True):
             navigate("manage_salesperson")
     with col_btn3:
+        if st.button("📊 月度历史", use_container_width=True):
+            navigate("monthly_history")
+    with col_btn4:
         if st.button("📥 导出数据", use_container_width=True):
             navigate("export")
     
@@ -537,7 +585,8 @@ elif st.session_state.current_page == "salesperson":
     if "salesperson_view" not in st.session_state:
         st.session_state.salesperson_view = "preview"
     
-    products = db.query(Product).filter(Product.salesperson_id == person.id).all()
+    all_products = db.query(Product).filter(Product.salesperson_id == person.id).all()
+    products = get_valid_products(all_products)
     delivered_amount = sum(p.amount for p in products if p.is_delivered)
     task_amount = sum(p.amount for p in products)
     delivered_count = sum(1 for p in products if p.is_delivered)
@@ -558,6 +607,9 @@ elif st.session_state.current_page == "salesperson":
     
     st.markdown(f'<h2 class="main-title">👤 {person.name}</h2>', unsafe_allow_html=True)
     
+    total_all = len(all_products)
+    valid_count = len(products)
+    
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
@@ -567,11 +619,10 @@ elif st.session_state.current_page == "salesperson":
         </div>
         """, unsafe_allow_html=True)
     with col2:
-        total_count = len(products)
         st.markdown(f"""
         <div class="metric-card metric-card-green" style="height: 100%;">
-            <div style="font-size: 1.5rem; font-weight: 700;">{delivered_count}/{total_count}</div>
-            <div style="opacity: 0.9;">完成数量</div>
+            <div style="font-size: 1.5rem; font-weight: 700;">{delivered_count}/{valid_count}</div>
+            <div style="opacity: 0.9;">完成数量 (上架中)</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -579,10 +630,13 @@ elif st.session_state.current_page == "salesperson":
         st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
         st.subheader("📋 产品列表")
         
-        if not products:
+        if not all_products:
             st.info("暂无产品")
         else:
-            header_cols = st.columns([1, 1, 2, 2, 2, 2, 1])
+            valid_count = len(products)
+            invalid_count = len(all_products) - valid_count
+            
+            header_cols = st.columns([1, 1, 2, 2, 2, 2, 1, 1])
             with header_cols[0]:
                 st.markdown("**序号**")
             with header_cols[1]:
@@ -596,14 +650,23 @@ elif st.session_state.current_page == "salesperson":
             with header_cols[5]:
                 st.markdown("**参数A**")
             with header_cols[6]:
+                st.markdown("**上架**")
+            with header_cols[7]:
                 st.markdown("**操作**")
             
             st.markdown("---")
             
-            for idx, prod in enumerate(products, 1):
-                row_cols = st.columns([1, 1, 2, 2, 2, 2, 1])
+            valid_products = [p for p in all_products if p.param_a > 800]
+            invalid_products = [p for p in all_products if p.param_a <= 800]
+            
+            idx_valid = 0
+            for prod in valid_products:
+                idx_valid += 1
+                display_idx = idx_valid
+                
+                row_cols = st.columns([1, 1, 2, 2, 2, 2, 1, 1])
                 with row_cols[0]:
-                    st.write(str(idx))
+                    st.write(str(display_idx))
                 with row_cols[1]:
                     if prod.is_delivered:
                         st.markdown("<div class='status-icon status-delivered'>✓</div>", unsafe_allow_html=True)
@@ -614,14 +677,42 @@ elif st.session_state.current_page == "salesperson":
                 with row_cols[3]:
                     st.write(prod.product_type or "-")
                 with row_cols[4]:
-                    st.write(prod.grade or "-")
+                    st.write(str(int(float(prod.grade))) if prod.grade else "-")
                 with row_cols[5]:
                     st.write(f"¥{prod.param_a:,.0f}")
                 with row_cols[6]:
+                    st.write("✓")
+                with row_cols[7]:
                     if st.button("切换", key=f"toggle_{prod.id}"):
                         prod.is_delivered = not prod.is_delivered
                         db.commit()
                         st.rerun()
+            
+            idx_invalid = 0
+            for prod in invalid_products:
+                idx_invalid += 1
+                display_idx = idx_invalid
+                
+                row_cols = st.columns([1, 1, 2, 2, 2, 2, 1, 1])
+                with row_cols[0]:
+                    st.write(str(display_idx))
+                with row_cols[1]:
+                    st.markdown("<div style='background: #e5e7eb; color: #6b7280; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;'>下架</div>", unsafe_allow_html=True)
+                with row_cols[2]:
+                    st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
+                with row_cols[3]:
+                    st.write(prod.product_type or "-")
+                with row_cols[4]:
+                    st.write(str(int(float(prod.grade))) if prod.grade else "-")
+                with row_cols[5]:
+                    st.write(f"¥{prod.param_a:,.0f}")
+                with row_cols[6]:
+                    st.write("×")
+                with row_cols[7]:
+                    st.write("-")
+            
+            st.markdown("---")
+            st.markdown(f"**统计**: 上架中 {len(valid_products)} | 下架 {len(invalid_products)} | 总计 {len(all_products)}")
     
     elif st.session_state.salesperson_view == "edit":
         with st.expander("⚙️ 参数配置", expanded=False):
@@ -859,7 +950,7 @@ elif st.session_state.current_page == "salesperson":
                     with col3:
                         st.write(prod.product_type or "-")
                     with col4:
-                        st.write(prod.grade or "-")
+                        st.write(str(int(float(prod.grade))) if prod.grade else "-")
                     with col5:
                         st.write(f"¥{prod.param_a:,.0f}")
                     with col6:
@@ -1002,5 +1093,76 @@ elif st.session_state.current_page == "export":
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
+
+elif st.session_state.current_page == "monthly_history":
+    st.title("📊 月度历史记录")
+    
+    if st.button("← 返回首页"):
+        navigate("home")
+        st.rerun()
+    
+    st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+    
+    if st.button("💾 保存当月快照", use_container_width=True):
+        save_monthly_snapshot()
+        st.success("快照已保存")
+        st.rerun()
+    
+    st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+    
+    records = db.query(MonthlyRecord).order_by(MonthlyRecord.year.desc(), MonthlyRecord.month.desc()).all()
+    
+    if not records:
+        st.info("暂无月度记录，请先保存当月快照")
+    else:
+        persons = db.query(SalesPerson).all()
+        person_names = [p.name for p in persons]
+        selected_person = st.selectbox("选择销售员", ["全部"] + person_names)
+        
+        st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
+        
+        if selected_person == "全部":
+            filtered_records = records
+        else:
+            person = db.query(SalesPerson).filter(SalesPerson.name == selected_person).first()
+            filtered_records = [r for r in records if r.salesperson_id == person.id] if person else []
+        
+        header_cols = st.columns([2, 2, 2, 2, 2, 2, 1])
+        with header_cols[0]:
+            st.markdown("**年月**")
+        with header_cols[1]:
+            st.markdown("**销售员**")
+        with header_cols[2]:
+            st.markdown("**产品数量**")
+        with header_cols[3]:
+            st.markdown("**任务金额**")
+        with header_cols[4]:
+            st.markdown("**交付数量**")
+        with header_cols[5]:
+            st.markdown("**交付金额**")
+        with header_cols[6]:
+            st.markdown("**日期**")
+        
+        st.markdown("---")
+        
+        for rec in filtered_records:
+            person = db.query(SalesPerson).filter(SalesPerson.id == rec.salesperson_id).first()
+            row_cols = st.columns([2, 2, 2, 2, 2, 2, 1])
+            with row_cols[0]:
+                st.write(f"{rec.year}-{rec.month:02d}")
+            with row_cols[1]:
+                st.write(person.name if person else "未知")
+            with row_cols[2]:
+                st.write(str(rec.total_products))
+            with row_cols[3]:
+                st.write(f"¥{rec.total_amount:,.0f}")
+            with row_cols[4]:
+                st.write(f"{rec.delivered_count}")
+            with row_cols[5]:
+                st.write(f"¥{rec.delivered_amount:,.0f}")
+            with row_cols[6]:
+                st.write(str(rec.snapshot_date))
+            
+            st.markdown("<hr class='custom-divider'>", unsafe_allow_html=True)
 
 db.close()

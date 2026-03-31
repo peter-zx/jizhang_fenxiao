@@ -11,6 +11,7 @@ class SalesPerson(Base):
     is_active = Column(Boolean, default=True)
 
     products = relationship("Product", back_populates="salesperson")
+    monthly_records = relationship("MonthlyRecord", back_populates="salesperson")
 
 class Product(Base):
     __tablename__ = "products"
@@ -40,7 +41,13 @@ class Product(Base):
 
     @property
     def amount(self):
+        if self.param_a <= 800:
+            return 0
         return self.param_a - 800
+    
+    @property
+    def is_valid(self):
+        return self.param_a > 800
 
 class SystemConfig(Base):
     __tablename__ = "system_config"
@@ -48,3 +55,20 @@ class SystemConfig(Base):
     id = Column(Integer, primary_key=True, index=True)
     param_c = Column(Float, default=300)
     param_d = Column(Float, default=500)
+
+class MonthlyRecord(Base):
+    __tablename__ = "monthly_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    salesperson_id = Column(Integer, ForeignKey("salespersons.id"), nullable=False)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    
+    total_products = Column(Integer, default=0)
+    total_amount = Column(Float, default=0)
+    delivered_count = Column(Integer, default=0)
+    delivered_amount = Column(Float, default=0)
+    
+    snapshot_date = Column(Date, nullable=False)
+    
+    salesperson = relationship("SalesPerson", back_populates="monthly_records")
