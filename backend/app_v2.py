@@ -810,13 +810,20 @@ elif st.session_state.current_page == "salesperson":
             df = pd.DataFrame(df_data)
             
             col_config = {
-                "序号": st.column_config.NumberColumn("序号", width="small"),
-                "状态": st.column_config.TextColumn("状态", width="medium"),
-                "Name": st.column_config.TextColumn("Name", width="large"),
-                "参数A": st.column_config.NumberColumn("参数A", format="¥%.0f", width="medium"),
+                "序号": st.column_config.NumberColumn("序号"),
+                "状态": st.column_config.TextColumn("状态"),
+                "Name": st.column_config.TextColumn("Name"),
+                "参数A": st.column_config.NumberColumn("参数A", format="¥%.0f"),
             }
             
             st.dataframe(df, column_config=col_config, hide_index=True, use_container_width=True, height=26*35)
+            
+            st.markdown("""
+            <style>
+                [data-testid="stDataFrame"] td { text-align: center !important; }
+                [data-testid="stDataFrame"] th { text-align: center !important; }
+            </style>
+            """, unsafe_allow_html=True)
     
     elif st.session_state.salesperson_view == "edit":
         with st.expander("⚙️ 参数配置", expanded=False):
