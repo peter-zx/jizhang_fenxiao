@@ -465,27 +465,20 @@ elif st.session_state.current_page == "salesperson":
     
     st.markdown(f'<h2 class="main-title">👤 {person.name}</h2>', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
-        <div class="metric-card">
-            <div style="font-size: 1.5rem; font-weight: 700;">¥{task_amount:,.0f}</div>
-            <div style="opacity: 0.9;">任务金额</div>
+        <div class="metric-card" style="height: 100%;">
+            <div style="font-size: 1.3rem; font-weight: 700;">¥{task_amount:,.0f} / ¥{delivered_amount:,.0f}</div>
+            <div style="opacity: 0.9;">任务金额 / 完成金额</div>
         </div>
         """, unsafe_allow_html=True)
     with col2:
+        total_count = len(products)
         st.markdown(f"""
-        <div class="metric-card metric-card-green">
-            <div style="font-size: 1.5rem; font-weight: 700;">¥{delivered_amount:,.0f}</div>
-            <div style="opacity: 0.9;">已完成</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        pct = delivered_amount/task_amount*100 if task_amount > 0 else 0
-        st.markdown(f"""
-        <div class="metric-card metric-card-orange">
-            <div style="font-size: 1.5rem; font-weight: 700;">{pct:.1f}%</div>
-            <div style="opacity: 0.9;">完成率</div>
+        <div class="metric-card metric-card-green" style="height: 100%;">
+            <div style="font-size: 1.5rem; font-weight: 700;">{delivered_count}/{total_count}</div>
+            <div style="opacity: 0.9;">完成数量</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -496,34 +489,42 @@ elif st.session_state.current_page == "salesperson":
         if not products:
             st.info("暂无产品")
         else:
-            header_cols = st.columns([1, 3, 2, 2, 1])
+            header_cols = st.columns([1, 1, 2, 2, 2, 2, 1])
             with header_cols[0]:
-                st.markdown("**状态**")
+                st.markdown("**序号**")
             with header_cols[1]:
-                st.markdown("**Name**")
+                st.markdown("**状态**")
             with header_cols[2]:
-                st.markdown("**类型**")
+                st.markdown("**Name**")
             with header_cols[3]:
-                st.markdown("**等级**")
+                st.markdown("**类型**")
             with header_cols[4]:
+                st.markdown("**等级**")
+            with header_cols[5]:
+                st.markdown("**参数A**")
+            with header_cols[6]:
                 st.markdown("**操作**")
             
             st.markdown("---")
             
-            for prod in products:
-                row_cols = st.columns([1, 3, 2, 2, 1])
+            for idx, prod in enumerate(products, 1):
+                row_cols = st.columns([1, 1, 2, 2, 2, 2, 1])
                 with row_cols[0]:
+                    st.write(str(idx))
+                with row_cols[1]:
                     if prod.is_delivered:
                         st.markdown("<div class='status-icon status-delivered'>✓</div>", unsafe_allow_html=True)
                     else:
                         st.markdown("<div class='status-icon status-pending'>○</div>", unsafe_allow_html=True)
-                with row_cols[1]:
-                    st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
                 with row_cols[2]:
-                    st.write(prod.product_type or "-")
+                    st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
                 with row_cols[3]:
-                    st.write(prod.grade or "-")
+                    st.write(prod.product_type or "-")
                 with row_cols[4]:
+                    st.write(prod.grade or "-")
+                with row_cols[5]:
+                    st.write(f"¥{prod.param_a:,.0f}")
+                with row_cols[6]:
                     if st.button("切换", key=f"toggle_{prod.id}"):
                         prod.is_delivered = not prod.is_delivered
                         db.commit()
@@ -558,19 +559,9 @@ elif st.session_state.current_page == "salesperson":
             
             col1, col2 = st.columns(2)
             with col1:
-                st.write("等级")
-                g1 = st.checkbox("1级", key="grade_1")
-                g2 = st.checkbox("2级", key="grade_2")
-                g3 = st.checkbox("3级", key="grade_3")
-                g4 = st.checkbox("4级", key="grade_4")
-                grades = []
-                if g1: grades.append("1级")
-                if g2: grades.append("2级")
-                if g3: grades.append("3级")
-                if g4: grades.append("4级")
-                grade_str = "/".join(grades)
+                grade_str = st.selectbox("等级", ["", "1级", "2级", "3级", "4级"], key="grade_select")
             with col2:
-                prod_param_a = st.number_input("参数A*", min_value=1.0, step=100.0, key="prod_param_a")
+                prod_param_a = st.number_input("参数A*", min_value=0.0, step=100.0, key="prod_param_a")
             
             prod_amount = prod_param_a - FORMULA_AMOUNT if prod_param_a > 0 else 0
             st.info(f"计算金额: ¥{prod_amount:,.0f}")
@@ -685,19 +676,106 @@ elif st.session_state.current_page == "salesperson":
             st.info("暂无产品")
         else:
             for prod in products:
-                col1, col2, col3, col4 = st.columns([1, 3, 2, 1])
-                with col1:
-                    if prod.is_delivered:
-                        st.markdown("<div class='status-icon status-delivered'>✓</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<div class='status-icon status-pending'>○</div>", unsafe_allow_html=True)
-                with col2:
-                    st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
-                with col3:
-                    st.write(f"{prod.product_type or ''} {prod.grade or ''}")
-                with col4:
-                    if st.button("删除", key=f"del_{prod.id}"):
-                        st.session_state[f"confirm_delete_{prod.id}"] = True
+                edit_key = f"edit_mode_{prod.id}"
+                
+                if st.session_state.get(edit_key, False):
+                    with st.expander(f"✏️ 编辑: {prod.name}", expanded=True):
+                        with st.form(f"edit_form_{prod.id}"):
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                edit_name = st.text_input("产品名字*", value=prod.name, key=f"edit_name_{prod.id}")
+                            with col2:
+                                edit_years = st.text_input("年限", value=prod.years or "", key=f"edit_years_{prod.id}")
+                            with col3:
+                                edit_type = st.text_input("类型", value=prod.product_type or "", key=f"edit_type_{prod.id}")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                edit_grade = st.selectbox("等级", ["", "1级", "2级", "3级", "4级"], index=["", "1级", "2级", "3级", "4级"].index(prod.grade or "") if (prod.grade or "") in ["", "1级", "2级", "3级", "4级"] else 0, key=f"edit_grade_{prod.id}")
+                            with col2:
+                                edit_param_a = st.number_input("参数A*", value=prod.param_a, min_value=0.0, step=100.0, key=f"edit_param_a_{prod.id}")
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                edit_date = st.date_input("生产日期", value=prod.production_date or date.today(), key=f"edit_date_{prod.id}")
+                            with col2:
+                                edit_expire = st.date_input("过期时间", value=prod.expire_date or date.today() + timedelta(days=365), key=f"edit_expire_{prod.id}")
+                            with col3:
+                                edit_seal = st.date_input("盖章日期", value=prod.seal_date or date.today(), key=f"edit_seal_{prod.id}")
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                edit_seal_expire = st.date_input("盖章过期时间", value=prod.seal_expire_date or date.today() + timedelta(days=365), key=f"edit_seal_expire_{prod.id}")
+                            with col2:
+                                edit_contact = st.text_input("联系方式", value=prod.contact or "", key=f"edit_contact_{prod.id}")
+                            with col3:
+                                edit_emergency = st.text_input("紧急联系", value=prod.emergency_contact or "", key=f"edit_emergency_{prod.id}")
+                            
+                            col1, col2 = st.columns([2, 1])
+                            with col1:
+                                edit_address = st.text_area("地址", value=prod.address or "", key=f"edit_address_{prod.id}")
+                            with col2:
+                                edit_remark = st.text_area("备注", value=prod.remark or "", key=f"edit_remark_{prod.id}")
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                submitted = st.form_submit_button("保存修改", use_container_width=True)
+                            with col2:
+                                canceled = st.form_submit_button("取消", use_container_width=True)
+                            with col3:
+                                deleted = st.form_submit_button("删除产品", use_container_width=True)
+                            
+                            if submitted:
+                                prod.name = edit_name
+                                prod.years = edit_years
+                                prod.product_type = edit_type
+                                prod.grade = edit_grade
+                                prod.param_a = edit_param_a
+                                prod.production_date = edit_date
+                                prod.expire_date = edit_expire
+                                prod.seal_date = edit_seal
+                                prod.seal_expire_date = edit_seal_expire
+                                prod.contact = edit_contact
+                                prod.emergency_contact = edit_emergency
+                                prod.address = edit_address
+                                prod.remark = edit_remark
+                                db.commit()
+                                recalculate_target_amounts()
+                                st.success("已保存")
+                                st.rerun()
+                            
+                            if canceled:
+                                st.session_state[edit_key] = False
+                                st.rerun()
+                            
+                            if deleted:
+                                db.delete(prod)
+                                db.commit()
+                                recalculate_target_amounts()
+                                st.success("已删除")
+                                st.rerun()
+                else:
+                    col1, col2, col3, col4, col5, col6 = st.columns([1, 2, 2, 2, 2, 1])
+                    with col1:
+                        if prod.is_delivered:
+                            st.markdown("<div class='status-icon status-delivered'>✓</div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<div class='status-icon status-pending'>○</div>", unsafe_allow_html=True)
+                    with col2:
+                        st.markdown(f"<div class='product-name'>{prod.name}</div>", unsafe_allow_html=True)
+                    with col3:
+                        st.write(prod.product_type or "-")
+                    with col4:
+                        st.write(prod.grade or "-")
+                    with col5:
+                        st.write(f"¥{prod.param_a:,.0f}")
+                    with col6:
+                        if st.button("编辑", key=f"edit_{prod.id}"):
+                            st.session_state[edit_key] = True
+                            st.rerun()
+                        if st.button("删除", key=f"del_{prod.id}"):
+                            st.session_state[f"confirm_delete_{prod.id}"] = True
+                            st.rerun()
                 
                 if st.session_state.get(f"confirm_delete_{prod.id}", False):
                     col1, col2 = st.columns(2)
