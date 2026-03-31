@@ -537,13 +537,20 @@ if st.session_state.current_page == "home":
             total_count = len(products)
             
             with cols[idx % 3]:
-                card_content = f"""👤 {person.name}
-────────────────────
-任务金额: ¥{task_amount:,.0f}
-任务数量: {delivered_count}/{total_count}
-────────────────────
-👆 点击进入详情"""
-                if st.button(card_content, key=f"btn_{person.id}", use_container_width=True):
+                st.markdown(f"""
+                <div style="background: white; border-radius: 16px; padding: 1.2rem; 
+                            box-shadow: 0 2px 12px rgba(0,0,0,0.08); text-align: left;">
+                    <div style="font-size: 1.3rem; font-weight: 600; color: #1a1a2e; 
+                                margin-bottom: 0.8rem; line-height: 1.3;">👤 {person.name}</div>
+                    <div style="font-size: 0.95rem; color: #6b7280; margin-bottom: 0.3rem;
+                                line-height: 1.3;">任务金额: ¥{task_amount:,.0f}</div>
+                    <div style="font-size: 0.95rem; color: #6b7280; margin-bottom: 0.8rem;
+                                line-height: 1.3;">任务数量: {delivered_count}/{total_count}</div>
+                    <div style="font-size: 0.85rem; color: #667eea; font-weight: 500;
+                                line-height: 1.3;">👆 点击进入</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("进入", key=f"btn_{person.id}", use_container_width=True):
                     go_salesperson(person.id)
             
             st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
