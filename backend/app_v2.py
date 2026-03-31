@@ -824,32 +824,30 @@ elif st.session_state.current_page == "salesperson":
             
             table_html += "</tbody></table>"
             
-            st.html(table_html)
+            col_left, col_right = st.columns([65, 35])
             
-            st.markdown("---")
-            st.markdown("**切换产品状态**")
+            with col_left:
+                st.html(table_html)
             
-            if not valid_products:
-                st.info("暂无上架产品")
-            else:
-                toggle_cols = st.columns([2, 1])
-                with toggle_cols[0]:
-                    selected_product = st.selectbox(
-                        "选择产品",
-                        options=[(p.id, p.name, p.is_delivered) for p in valid_products],
-                        format_func=lambda x: f"{x[1]} - {'已完成' if x[2] else '待完成'}",
-                        key="toggle_product_select"
-                    )
-                with toggle_cols[1]:
-                    st.write("") 
-                    st.write("")
-                    if st.button("🔄 切换状态", use_container_width=True):
-                        if selected_product:
-                            prod = db.query(Product).filter(Product.id == selected_product[0]).first()
-                            if prod:
-                                prod.is_delivered = not prod.is_delivered
-                                db.commit()
-                                st.rerun()
+            with col_right:
+                st.markdown("#### 操作")
+                for idx, prod in enumerate(valid_products):
+                    status_text = "✓ 已完成" if prod.is_delivered else "○ 待完成"
+                    status_color = "#10b981" if prod.is_delivered else "#f59e0b"
+                    btn_text = "标记未完成" if prod.is_delivered else "标记已完成"
+                    
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center; justify-content: space-between; 
+                                padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+                        <span style="color: {status_color}; font-size: 12px;">{idx+1}. {prod.name[:8]}</span>
+                        <span style="font-size: 11px; color: #9ca3af;">{status_text}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button(btn_text, key=f"toggle_{prod.id}", use_container_width=True):
+                        prod.is_delivered = not prod.is_delivered
+                        db.commit()
+                        st.rerun()
     
     elif st.session_state.salesperson_view == "edit":
         with st.expander("⚙️ 参数配置", expanded=False):
