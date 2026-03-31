@@ -798,7 +798,15 @@ elif st.session_state.current_page == "salesperson":
                 df_data.append({
                     "序号": idx + 1,
                     "状态": status,
-                    "产品名称": prod.name,
+                    "Name": prod.name,
+                    "参数A": prod.param_a
+                })
+            
+            for idx, prod in enumerate(invalid_products):
+                df_data.append({
+                    "序号": len(valid_products) + idx + 1,
+                    "状态": "下架",
+                    "Name": prod.name,
                     "参数A": prod.param_a
                 })
             
@@ -807,7 +815,7 @@ elif st.session_state.current_page == "salesperson":
             col_config = {
                 "序号": st.column_config.NumberColumn("序号", width="small"),
                 "状态": st.column_config.TextColumn("状态", width="medium"),
-                "产品名称": st.column_config.TextColumn("产品名称", width="large"),
+                "Name": st.column_config.TextColumn("Name", width="large"),
                 "参数A": st.column_config.NumberColumn("参数A", format="¥%.0f", width="medium"),
             }
             
