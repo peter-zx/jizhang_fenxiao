@@ -771,6 +771,27 @@ elif st.session_state.current_page == "salesperson":
             
             st.markdown(f"**统计**: 上架中 {len(valid_products)} | 下架 {len(invalid_products)} | 总计 {len(all_products)}")
             
+            st.markdown("##### 切换产品状态")
+            
+            num_cols = 5
+            rows = (len(valid_products) + num_cols - 1) // num_cols
+            
+            for row in range(rows):
+                btn_cols = st.columns(num_cols)
+                for col in range(num_cols):
+                    idx = row * num_cols + col
+                    if idx < len(valid_products):
+                        prod = valid_products[idx]
+                        status_text = "✓" if prod.is_delivered else "○"
+                        btn_label = f"{status_text} {prod.name}"
+                        with btn_cols[col]:
+                            if st.button(btn_label, key=f"toggle_{prod.id}", use_container_width=True):
+                                prod.is_delivered = not prod.is_delivered
+                                db.commit()
+                                st.rerun()
+            
+            st.markdown("---")
+            
             df_data = []
             for idx, prod in enumerate(valid_products):
                 status = "✓ 已完成" if prod.is_delivered else "○ 待完成"
@@ -790,20 +811,7 @@ elif st.session_state.current_page == "salesperson":
                 "参数A": st.column_config.NumberColumn("参数A", format="¥%.0f", width="medium"),
             }
             
-            st.dataframe(df, column_config=col_config, hide_index=True, use_container_width=True)
-            
-            st.markdown("---")
-            st.markdown("**切换产品状态**")
-            
-            btn_cols = st.columns([1, 3, 1])
-            for i, prod in enumerate(valid_products):
-                with btn_cols[i % 3]:
-                    status_text = "✓ 已完成" if prod.is_delivered else "○ 待完成"
-                    btn_label = f"{prod.name[:6]}... [{status_text}]" if len(prod.name) > 6 else f"{prod.name} [{status_text}]"
-                    if st.button(btn_label, key=f"toggle_{prod.id}", use_container_width=True):
-                        prod.is_delivered = not prod.is_delivered
-                        db.commit()
-                        st.rerun()
+            st.dataframe(df, column_config=col_config, hide_index=True, use_container_width=True, height=26*35)
     
     elif st.session_state.salesperson_view == "edit":
         with st.expander("⚙️ 参数配置", expanded=False):
